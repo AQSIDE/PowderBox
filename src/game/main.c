@@ -42,15 +42,11 @@ int main() {
         Vector2 point = getPointInMap(mouseWorldPos.x, mouseWorldPos.y, &map);
         Particle* pointedParticle = getPixel(&map, point.x, point.y);
 
-        fc.currentFrame = currentFrame;
         fc.pointedParticle = pointedParticle;
         fc.mapPoint = point;
 
         updatePlayer(&player);
         handlePlayerInput(&player, &sim, &map, &fc);
-
-        fc.pointedParticle = pointedParticle;
-        fc.mapPoint = point;
 
         if (player.inputTimer > 0) {
             player.inputTimer -= fc.deltaTime;
@@ -59,9 +55,9 @@ int main() {
         accumulator += fc.deltaTime * sim.simulationSpeed;
 
         while (accumulator >= timeStep) {
+            fc.currentFrame = currentFrame;
             updateSimulation(&sim, &map, &fc);
             currentFrame++;
-            fc.currentFrame = currentFrame;
 
             accumulator -= timeStep;
         }
