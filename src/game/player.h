@@ -4,6 +4,7 @@
 #include "map.h"
 #include "context.h"
 #include "simulation.h"
+#include "file.h"
 
 typedef enum {
     UI_NONE,
@@ -39,6 +40,7 @@ typedef struct Player {
     bool isOverUI;
     float inputTimer;
     int8_t canReplaceParticles;
+    MapList mapList;
 } Player;
 
 Player createPlayer(int mapW, int mapH);

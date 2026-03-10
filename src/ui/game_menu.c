@@ -178,6 +178,8 @@ void updateGameMenu(Player* player, Map* map) {
                 break;
             case 1:
                 player->currentWindow = UI_FILE;
+                loadMapList(&player->mapList, BASE_MAP_DIR);
+                setMapNameToInputField(map->name);
                 break;
             case 2:
                 player->currentWindow = UI_CLEAR_MAP;

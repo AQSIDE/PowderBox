@@ -1,3 +1,6 @@
+#ifndef PARTICLE_H
+#define PARTICLE_H
+
 #include "raylib.h"
 #include <stdint.h>
 
@@ -43,6 +46,11 @@ typedef struct Particle {
     int8_t flags;
 } Particle;
 
+typedef struct {
+    uint16_t type;
+    uint16_t temperature;
+} ParticleFile;
+
 void shuffleDirections(Vector2* array, int length);
 
 const char* getParticleNameFromType(ParticleType type);
@@ -50,3 +58,5 @@ int16_t getTemperatureFromType(ParticleType type);
 Color getColorFromType(ParticleType type);
 
 Particle createParticleFromType(ParticleType type);
+
+#endif

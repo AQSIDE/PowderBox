@@ -38,12 +38,8 @@ int main() {
 
         updateGameMenu(&player, &map);
 
-        Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), player.camera);
-        Vector2 point = getPointInMap(mouseWorldPos.x, mouseWorldPos.y, &map);
-        Particle* pointedParticle = getPixel(&map, point.x, point.y);
-
-        fc.pointedParticle = pointedParticle;
-        fc.mapPoint = point;
+        fc.mapPoint = getPointInMap(fc.worldMouse.x, fc.worldMouse.y, &map);
+        fc.pointedParticle = getPixel(&map, fc.mapPoint.x, fc.mapPoint.y);
 
         updatePlayer(&player);
         handlePlayerInput(&player, &sim, &map, &fc);

@@ -1,10 +1,16 @@
+#ifndef MAP_H
+#define MAP_H
+
 #include "raylib.h"
 #include "particle.h"
 
 #define EMPTY_COLOR      (Color){ 50, 50, 50, 255 }
 #define EMPTY_DARK_COLOR (Color){ 42, 42, 42, 255 }
 
+#define MAX_MAP_NAME 64
+
 typedef struct Map {
+    char name[MAX_MAP_NAME];
     int width;
     int height;
     int filledPixels;
@@ -17,6 +23,14 @@ typedef struct Map {
     Texture2D pixelsTexture;
     Texture2D temperatureTexture;
 } Map;
+
+typedef struct {
+    char magic[6]; // PWBOX
+    uint16_t width;
+    uint16_t height;
+    long long timestamp;
+    ParticleFile* particles;
+} MapFile;
 
 typedef struct NeighborList {
     int count;
@@ -37,8 +51,11 @@ void setTemperature(Map* map, int x, int y, uint16_t temp);
 
 void freeMap(Map* map);
 Map createMap(int width, int height);
+Map createMapFromFile(MapFile* mapFile, const char* name);
 void clearMap(Map* map);
 void drawMap(Map* map);
 int isInBounds(Map* map, int x, int y);
 Vector2 getPointInMap(float x, float y, Map* map);
 int getIndex(Map* map, int x, int y);
+
+#endif

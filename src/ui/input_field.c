@@ -1,16 +1,21 @@
 #include "input_field.h"
+#include "string.h"
 
-InputField createInputField(int id, Vector2 pos, Vector2 size, char* label, Color color) {
+InputField createInputField(int id, Vector2 pos, Vector2 size, const char* label, Color color) {
     InputField f = { 0 };
     f.id = id;
     f.pos = pos;
     f.size = size;
-    f.label = label;
+    strncpy(f.label, label, sizeof(f.label) - 1);
+    f.label[sizeof(f.label) - 1] = '\0';
+
     f.color = color;
     f.textSize = 20;
     f.charBuffer[0] = '\0';
     f.letterCount = 0;
     f.active = false;
+    f.onlyNumbers = false;
+    f.maxLetters = sizeof(f.charBuffer) - 1;
     return f;
 }
 
@@ -40,31 +45,39 @@ void updateInputField(InputField* f) {
     Rectangle rect = { f->pos.x, f->pos.y, f->size.x, f->size.y };
 
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-        if (CheckCollisionPointRec(GetMousePosition(), rect)) {
-            f->active = true;
-        }
-        else {
-            f->active = false;
-        }
+        f->active = CheckCollisionPointRec(GetMousePosition(), rect);
     }
 
     if (f->active) {
         int key = GetCharPressed();
-
         while (key > 0) {
-            if ((key >= '0') && (key <= '9') && (f->letterCount < 5)) {
-                f->charBuffer[f->letterCount] = (char)key;
-                f->charBuffer[f->letterCount + 1] = '\0';
-                f->letterCount++;
+            bool valid = true;
+
+            if (f->onlyNumbers) {
+                valid = (key >= '0' && key <= '9');
             }
+
+            if (valid && f->letterCount < f->maxLetters) {
+                f->charBuffer[f->letterCount] = (char)key;
+                f->letterCount++;
+                f->charBuffer[f->letterCount] = '\0';
+            }
+
             key = GetCharPressed();
         }
 
-        if (IsKeyPressed(KEY_BACKSPACE)) {
-            if (f->letterCount > 0) {
-                f->letterCount--;
-                f->charBuffer[f->letterCount] = '\0';
-            }
+        if ((IsKeyPressedRepeat(KEY_BACKSPACE) || IsKeyPressed(KEY_BACKSPACE)) && f->letterCount > 0) {
+            f->letterCount--;
+            f->charBuffer[f->letterCount] = '\0';
         }
     }
+}
+
+void setInputFieldText(InputField* f, const char* text) {
+    if (!f || !text) return;
+
+    strncpy(f->charBuffer, text, f->maxLetters);
+    f->charBuffer[f->maxLetters] = '\0';
+
+    f->letterCount = (int)strlen(f->charBuffer);
 }

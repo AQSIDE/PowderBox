@@ -1,6 +1,7 @@
 #include "map.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 Color getColorFromTemperature(uint16_t temp, int8_t glow) {
     const uint16_t T_ABSOLUTE_ZERO = 0;
@@ -48,6 +49,19 @@ Color getColorFromTemperature(uint16_t temp, int8_t glow) {
     return result;
 }
 
+Texture2D createBackgroundTexture(Color* out, int w, int h) {
+    for (int y = 0; y < h; y++)
+    {
+        for (int x = 0; x < w; x++)
+        {
+            if (x % 16 == 0 || y % 16 == 0)
+                out[y * w + x] = EMPTY_COLOR;
+            else
+                out[y * w + x] = EMPTY_DARK_COLOR;
+        }
+    }
+}
+
 Vector2 getCoordFromIndex(Map* map, int index) {
     int x = index % map->width;
     int y = index / map->width;
@@ -93,17 +107,13 @@ int isInBounds(Map* map, int x, int y) {
     return x >= 0 && x < map->width && y >= 0 && y < map->height;
 }
 
-void updateColorBuffer(Map* map) {
-    for (int i = 0; i < map->width * map->height; i++) {
-        map->colorBuffer[i] = map->particles[i].color;
-    }
-}
-
 Map createMap(int width, int height)
 {
     Map map = { 0 };
-    printf("START CREATING MAP\n");
 
+    const char* name = "My cool map.";
+
+    strncpy(map.name, name, sizeof(map.name));
     map.width = width;
     map.height = height;
     map.isDirty = 1;
@@ -111,80 +121,102 @@ Map createMap(int width, int height)
 
     int count = width * height;
 
-    // --- allocate memory ---
     map.particles = malloc(sizeof(Particle) * count);
     map.colorBuffer = malloc(sizeof(Color) * count);
     map.colorTempBuffer = malloc(sizeof(Color) * count);
 
-    printf("MAP ARRAYS ALLOCATED\n");
-
-    if (!map.particles || !map.colorBuffer || !map.colorTempBuffer)
-    {
-        TraceLog(LOG_FATAL, "Failed to allocate map memory");
-    }
-
-    // --- initialize particles ---
-    for (int i = 0; i < count; i++)
-    {
-        map.particles[i] = createParticleFromType(EMPTY);
-    }
-
-    printf("MAP PIXELS CREATED\n");
-
-    updateColorBuffer(&map);
-
-    // --- background image ---
-    Image imgB = GenImageColor(width, height, BLANK);
-    Color* pixelsBg = imgB.data;
-
-    for (int y = 0; y < height; y++)
-    {
-        int row = y * width;
-
-        for (int x = 0; x < width; x++)
-        {
-            if (x % 16 == 0 || y % 16 == 0)
-                pixelsBg[row + x] = EMPTY_COLOR;
-            else
-                pixelsBg[row + x] = EMPTY_DARK_COLOR;
-        }
-    }
-
-    printf("MAP BG CREATED\n");
-
-    // --- temperature image ---
     Image imgT = GenImageColor(width, height, BLANK);
     Color* pixelsTemp = imgT.data;
 
-    for (int i = 0; i < count; i++)
-    {
-        Color tempC = getColorFromTemperature(
-            map.particles[i].temperature,
-            map.particles[i].glowIntensity
-        );
+    Image imgB = GenImageColor(width, height, BLANK);
+    Color* pixelsBg = imgB.data;
 
-        pixelsTemp[i] = tempC;
-        map.colorTempBuffer[i] = tempC;
-    }
-
-    printf("MAP TEMP CREATED\n");
-
-    // --- particle image ---
     Image imgP = GenImageColor(width, height, BLANK);
 
-    // --- textures ---
+    for (int i = 0; i < count; i++)
+    {
+        Particle p = createParticleFromType(EMPTY);
+
+        map.particles[i] = p;
+        map.colorBuffer[i] = p.color;
+
+        Color tempColor = getColorFromTemperature(p.temperature, p.glowIntensity);
+
+        pixelsTemp[i] = tempColor;
+        map.colorTempBuffer[i] = tempColor;
+    }
+
+    createBackgroundTexture(pixelsBg, width, height);
+
     map.pixelsTexture = LoadTextureFromImage(imgP);
     map.backgroundTexture = LoadTextureFromImage(imgB);
     map.temperatureTexture = LoadTextureFromImage(imgT);
 
-    printf("MAP TEXTURES LOADED\n");
-
-    // --- cleanup images ---
     UnloadImage(imgP);
     UnloadImage(imgB);
     UnloadImage(imgT);
 
-    printf("MAP CREATED\n");
+    return map;
+}
+
+Map createMapFromFile(MapFile* mapFile, const char* name) {
+    Map map = { 0 };
+
+    int width = mapFile->width;
+    int height = mapFile->height;
+
+    strncpy(map.name, name, sizeof(map.name));
+    map.width = width;
+    map.height = height;
+    map.isDirty = 1;
+    map.isDirtyTemp = 1;
+
+    int count = width * height;
+
+    map.particles = malloc(sizeof(Particle) * count);
+    map.colorBuffer = malloc(sizeof(Color) * count);
+    map.colorTempBuffer = malloc(sizeof(Color) * count);
+
+    Image imgT = GenImageColor(width, height, BLANK);
+    Color* pixelsTemp = imgT.data;
+
+    Image imgB = GenImageColor(width, height, BLANK);
+    Color* pixelsBg = imgB.data;
+
+    Image imgP = GenImageColor(width, height, BLANK);
+
+    int filledParticles = 0;
+    for (int i = 0; i < count; i++)
+    {
+        ParticleFile* pFile = &mapFile->particles[i];
+        Particle p = createParticleFromType(pFile->type);
+        p.temperature = pFile->temperature;
+
+        if (p.type != EMPTY)
+            filledParticles++;
+
+        map.particles[i] = p;
+        map.colorBuffer[i] = p.color;
+
+        Color tempColor = getColorFromTemperature(p.temperature, p.glowIntensity);
+
+        map.colorTempBuffer[i] = tempColor;
+        pixelsTemp[i] = tempColor;
+    }
+
+    createBackgroundTexture(pixelsBg, width, height);
+
+    map.pixelsTexture = LoadTextureFromImage(imgP);
+    map.backgroundTexture = LoadTextureFromImage(imgB);
+    map.temperatureTexture = LoadTextureFromImage(imgT);
+    map.filledPixels = filledParticles;
+
+    UnloadImage(imgP);
+    UnloadImage(imgB);
+    UnloadImage(imgT);
+
+    free(mapFile->particles);
+    free(mapFile);
 
     return map;
 }
@@ -355,8 +387,16 @@ void drawMap(Map* map) {
     DrawTexture(map->temperatureTexture, 0, 0, WHITE);
     EndBlendMode();
 
-    DrawText("PowderBox", 1, -19, 20, (Color) { 0, 0, 0, 150 });
-    DrawText("PowderBox", 0, -20, 20, (Color) { 200, 200, 200, 180 });
+    Color shadowColor = (Color){ 0, 0, 0, 150 };
+    Color textColor = (Color){ 200, 200, 200, 180 };
+
+    DrawText("PowderBox", 1, -19, 20, shadowColor);
+    DrawText("PowderBox", 0, -20, 20, textColor);
+
+    float textY = map->height + 5;
+
+    DrawText(map->name, 1, textY, 15, shadowColor);
+    DrawText(map->name, 0, textY - 1, 15, textColor);
 }
 
 Particle* getPixel(Map* map, int x, int y) {

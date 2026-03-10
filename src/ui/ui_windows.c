@@ -4,12 +4,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 static Vector2 currentWindowSize;
 
 static Vector2 windowExitSize = (Vector2){ 400, 220 };
 static Vector2 windowClearMapSize = (Vector2){ 400, 220 };
 static Vector2 windowMapSize = (Vector2){ 600, 400 };
+static Vector2 windowMapStorage = (Vector2){ 800, 700 };
 
 static Button exitWindowBtn;
 
@@ -22,6 +24,14 @@ static Button noClearMapButton;
 static Button applyMapButton;
 static InputField mapWidthIF;
 static InputField mapHeightIF;
+
+static Button saveMapButton;
+static Button loadMapButton;
+static Button deleteMapButton;
+static InputField mapNameIF;
+
+static int selectedMapIndex = -1;
+static float scrollOffset = 0;
 
 static bool mapSettingsChanged = false;
 
@@ -38,7 +48,14 @@ void initWidows(Map* map) {
 
     applyMapButton = createButton(0, (Vector2) { 0 }, (Vector2) { 300, 60 }, "APPLY", GREEN, BLACK, WHITE);
     mapWidthIF = createInputField(0, (Vector2) { 0 }, (Vector2) { 300, 60 }, "WIDTH: ", GREEN);
+    mapWidthIF.onlyNumbers = true;
     mapHeightIF = createInputField(0, (Vector2) { 0 }, (Vector2) { 300, 60 }, "HEIGHT: ", GREEN);
+    mapHeightIF.onlyNumbers = true;
+
+    mapNameIF = createInputField(0, (Vector2) { 0 }, (Vector2) { 400, 60 }, "NAME: ", GREEN);
+    saveMapButton = createButton(0, (Vector2) { 0 }, (Vector2) { 200, 40 }, "SAVE", GREEN, BLACK, WHITE);
+    loadMapButton = createButton(0, (Vector2) { 0 }, (Vector2) { 200, 40 }, "LOAD", ORANGE, BLACK, WHITE);
+    deleteMapButton = createButton(0, (Vector2) { 0 }, (Vector2) { 200, 40 }, "DELETE", RED, BLACK, WHITE);
 
     snprintf(mapWidthIF.charBuffer, 16, "%d", map->width);
     mapWidthIF.letterCount = strlen(mapWidthIF.charBuffer);
@@ -107,6 +124,128 @@ void drawClearMap(Player* player, FrameContext* fc, float x, float y) {
     drawButton(&noClearMapButton);
 }
 
+void drawMapStorage(Player* player, FrameContext* fc, float x, float y) {
+    const char* title = "MAP STORAGE";
+    int fontSize = 30;
+
+    int textWidth = MeasureText(title, fontSize);
+    float titleX = x + currentWindowSize.x / 2.0f - textWidth / 2.0f;
+    DrawText(title, titleX, y + 20, fontSize, GOLD);
+
+    float padding = 30.0f;
+    float line1Y = y + 80;
+
+    mapNameIF.pos = (Vector2){ x + padding + 80, line1Y };
+    drawInputField(&mapNameIF);
+
+    float blockWidth = currentWindowSize.x - padding;
+    float blockPadding = 80;
+    float blockHeight = 450;
+
+    Rectangle blockRect = { x + currentWindowSize.x / 2 - blockWidth / 2,line1Y + blockPadding,blockWidth,blockHeight };
+    DrawRectangleRec(blockRect, (Color) { 0, 0, 0, 100 });
+
+    if (CheckCollisionPointRec(fc->screenMouse, blockRect)) {
+        float scroll = GetMouseWheelMove();
+        if (scroll != 0) {
+            float scrollSpeed = 30.0f;
+            scrollOffset -= scroll * scrollSpeed;
+            if (scrollOffset < 0) scrollOffset = 0;
+        }
+    }
+
+    float mapsTop = line1Y + blockPadding;
+    float mapsLeft = x + padding;
+    float mapsRight = x + currentWindowSize.x - padding;
+    float blockInnerWidth = mapsRight - mapsLeft;
+    float blockHeightPerMap = 100;
+    float blockSpacing = 5;
+
+    BeginScissorMode(blockRect.x, blockRect.y, blockRect.width, blockRect.height);
+    for (int i = 0; i < player->mapList.mapCount; i++) {
+        MapInfo* map = &player->mapList.maps[i];
+        float blockY = mapsTop + i * (blockHeightPerMap + blockSpacing) - scrollOffset;
+        Rectangle mapRect = { mapsLeft, blockY, blockInnerWidth, blockHeightPerMap };
+
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(fc->screenMouse, mapRect)) {
+            selectedMapIndex = (selectedMapIndex != i) ? i : -1;
+
+            if (i < player->mapList.mapCount) {
+                MapInfo* mapInfo = &player->mapList.maps[i];
+
+                setInputFieldText(&mapNameIF, mapInfo->name);
+            }
+        }
+
+        Color blockColor = (selectedMapIndex == i) ? (Color) { 70, 70, 70, 200 } : (Color) { 50, 50, 50, 150 };
+        DrawRectangleRec(mapRect, blockColor);
+
+        if (selectedMapIndex == i) {
+            DrawRectangleLinesEx(mapRect, 2.0f, GOLD);
+        }
+
+        if (map->preview.id > 0) {
+            float previewSize = blockHeightPerMap - 10;
+            Rectangle destRect = {
+                mapsLeft + 5,
+                blockY + 5,
+                previewSize,
+                previewSize
+            };
+
+            Rectangle sourceRect = { 0, 0, (float)map->preview.width, (float)map->preview.height };
+
+            DrawTexturePro(
+                map->preview,
+                sourceRect,
+                destRect,
+                (Vector2) {
+                0, 0
+            },
+                0.0f,
+                WHITE
+            );
+
+            DrawRectangleLinesEx(destRect, 1.0f, WHITE);
+        }
+
+        int textNameX = mapsLeft + 10 + blockHeightPerMap;
+        int textNameY = blockY + (blockHeightPerMap / 2) - 18;
+        DrawText(map->name, textNameX, textNameY, 20, RAYWHITE);
+
+        time_t t = (time_t)map->timestamp;
+        struct tm* dt = localtime(&t);
+
+        char timeStr[32] = "N/A";
+
+        if (dt) {
+            strftime(timeStr, sizeof(timeStr), "%d.%m %H:%M", dt);
+        }
+
+        int sizeTextY = textNameY + 22;
+        DrawText(timeStr, textNameX, sizeTextY, 16, LIGHTGRAY);
+
+        char sizeText[32];
+        snprintf(sizeText, sizeof(sizeText), "%dx%d", map->width, map->height);
+
+        int textWidth = MeasureText(sizeText, 20);
+        DrawText(sizeText, mapRect.x + mapRect.width - textWidth - 20, textNameY, 20, RAYWHITE);
+    }
+    EndScissorMode();
+
+    saveMapButton.pos = (Vector2){
+    x + currentWindowSize.x - saveMapButton.size.x - padding,
+    line1Y + (mapNameIF.size.y - saveMapButton.size.y) / 2 };
+    drawButton(&saveMapButton);
+
+    float line2Y = y + currentWindowSize.y - 60;
+    deleteMapButton.pos = (Vector2){ x + currentWindowSize.x - padding - deleteMapButton.size.x, line2Y };
+    drawButton(&deleteMapButton);
+
+    loadMapButton.pos = (Vector2){ x + padding, line2Y };
+    drawButton(&loadMapButton);
+}
+
 void drawWindow(Player* player, Map* map, FrameContext* fc) {
     DrawRectangle(0, 0, fc->window->width, fc->window->height, (Color) { 0, 0, 0, 150 });
 
@@ -115,6 +254,7 @@ void drawWindow(Player* player, Map* map, FrameContext* fc) {
         currentWindowSize = windowMapSize;
         break;
     case UI_FILE:
+        currentWindowSize = windowMapStorage;
         break;
     case UI_SETTINGS:
         break;
@@ -139,6 +279,7 @@ void drawWindow(Player* player, Map* map, FrameContext* fc) {
         drawMapSettings(player, map, fc, x, y);
         break;
     case UI_FILE:
+        drawMapStorage(player, fc, x, y);
         break;
     case UI_SETTINGS:
         break;
@@ -175,9 +316,8 @@ void updateWindow(Player* player, Map* map) {
 
         int inputW = atoi(mapWidthIF.charBuffer);
         int inputH = atoi(mapHeightIF.charBuffer);
-        bool changed = (inputW != map->width || inputH != map->height);
 
-        if (changed && isButtonClicked(&applyMapButton)) {
+        if (mapSettingsChanged && isButtonClicked(&applyMapButton)) {
             if (inputW < 16 || inputH < 16) return;
             if (inputW > 2000 || inputH > 2000) return;
 
@@ -185,19 +325,59 @@ void updateWindow(Player* player, Map* map) {
 
             *map = createMap(inputW, inputH);
 
-            //snprintf(mapWidthIF.charBuffer, 15, "%d", map->width);
-            //mapWidthIF.letterCount = (int)strlen(mapWidthIF.charBuffer);
-
-            //snprintf(mapHeightIF.charBuffer, 15, "%d", map->height);
-            //mapHeightIF.letterCount = (int)strlen(mapHeightIF.charBuffer);
-
-            player->camera.target = (Vector2){ map->width / 2.0f, map->height / 2.0f };
             player->currentWindow = UI_NONE;
             player->inputTimer = 0.5f;
         }
         return;
     case UI_FILE:
-        player->inputTimer = 0.5f;
+        updateInputField(&mapNameIF);
+
+        if (isButtonClicked(&saveMapButton)) {
+            char name[32];
+            strcpy(name, mapNameIF.charBuffer);
+
+            if (name[0] != '\0') {
+                saveMapToFolder(map, name, BASE_MAP_DIR);
+
+                strncpy(map->name, name, sizeof(map->name));
+                loadMapList(&player->mapList, BASE_MAP_DIR);
+            }
+            return;
+        }
+
+        if (isButtonClicked(&deleteMapButton)) {
+            if (selectedMapIndex < 0 || selectedMapIndex >= player->mapList.mapCount) return;
+
+            MapInfo* selectedMap = &player->mapList.maps[selectedMapIndex];
+
+            deleteMapFile(selectedMap->path);
+            UnloadTexture(selectedMap->preview);
+
+            for (int i = selectedMapIndex; i < player->mapList.mapCount - 1; i++) {
+                player->mapList.maps[i] = player->mapList.maps[i + 1];
+            }
+
+            player->mapList.mapCount--;
+            selectedMapIndex = -1;
+
+            loadMapList(&player->mapList, BASE_MAP_DIR);
+        }
+
+        if (isButtonClicked(&loadMapButton)) {
+            if (selectedMapIndex <= -1) return;
+
+            MapInfo* selectedMap = &player->mapList.maps[selectedMapIndex];
+            freeMap(map);
+
+            MapFile* file = loadMapFromPath(selectedMap->path);
+
+            *map = createMapFromFile(file, selectedMap->name);
+
+            player->currentWindow = UI_NONE;
+            player->inputTimer = 0.5f;
+            return;
+        }
+
         return;
     case UI_SETTINGS:
         player->inputTimer = 0.5f;
@@ -228,4 +408,9 @@ void updateWindow(Player* player, Map* map) {
     default:
         return;
     }
+}
+
+void setMapNameToInputField(const char* name) {
+    setInputFieldText(&mapNameIF, name);
+    selectedMapIndex = -1;
 }
