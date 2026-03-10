@@ -68,7 +68,7 @@ int main() {
 
         BeginMode2D(player.camera);
         drawMap(&map);
-        drawPlayerCrosshair(&player, &fc);
+        drawPlayerCrosshair(&player, &cursor, &fc);
         EndMode2D();
 
         drawGameMenu(&player, &map, &cursor, &fc);

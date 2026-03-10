@@ -25,6 +25,8 @@ CursorData* getCursorFromType(CursorState* c) {
         return &c->textCursor;
     case CUSTOM_CURSOR_BUSY:
         return &c->busyCursor;
+    case CUSTOM_CURSOR_CROSS:
+        return &c->crossCursor;
 
     default:
         return &c->defaultCursor;
@@ -44,6 +46,7 @@ CursorState loadCursors() {
 
     c.textCursor = createCursor("resources/textures/cursors/bracket_a_vertical.png");
     c.busyCursor = createCursor("resources/textures/cursors/busy_circle.png");
+    c.crossCursor = createCursor("resources/textures/cursors/cross_small.png");
 
     if (c.defaultCursor.texture.id > 0 &&
         c.pointerCursor.texture.id > 0) {

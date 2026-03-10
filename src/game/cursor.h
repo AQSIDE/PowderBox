@@ -10,6 +10,7 @@ typedef enum {
     CUSTOM_CURSOR_BRUSH,
     CUSTOM_CURSOR_TEXT,
     CUSTOM_CURSOR_BUSY,
+    CUSTOM_CURSOR_CROSS,
 } CursorType;
 
 typedef struct {
@@ -24,6 +25,7 @@ typedef struct {
     CursorData brushCursor;
     CursorData textCursor;
     CursorData busyCursor;
+    CursorData crossCursor;
 } CursorState;
 
 CursorState loadCursors();

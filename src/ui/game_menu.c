@@ -197,8 +197,13 @@ void updateGameMenu(Player* player, CursorState* cur, Map* map) {
     }
 }
 
-void drawPlayerCrosshair(Player* player, FrameContext* fc) {
+void drawPlayerCrosshair(Player* player, CursorState* cur, FrameContext* fc) {
     if (player->currentWindow != UI_NONE || player->isOverUI) return;
+
+    if (!fc->pointedParticle) {
+        cur->currentType = CUSTOM_CURSOR_CROSS;
+        return;
+    }
 
     float thickness = 1.0f / player->camera.zoom;
 
