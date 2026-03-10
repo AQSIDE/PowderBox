@@ -1,7 +1,9 @@
 #include "cursor.h"
 #include "stdlib.h"
+#include "raymath.h"
 
 static bool isCursorsLoaded = false;
+static float currentCursorSize = CUR_SCALE;
 
 CursorData createCursor(const char* path) {
     CursorData c;
@@ -62,18 +64,21 @@ void drawCursor(CursorState* c, Vector2 mousePos) {
 
     CursorData* cur = getCursorFromType(c);
 
+    float targetScale = IsMouseButtonDown(MOUSE_LEFT_BUTTON) ? (CUR_SCALE * 0.8f) : CUR_SCALE;
+    currentCursorSize = Lerp(currentCursorSize, targetScale, 20.0f * GetFrameTime());
+
     Rectangle source = { 0.0f, 0.0f, (float)cur->texture.width, (float)cur->texture.height };
 
     Rectangle dest = {
         mousePos.x,
         mousePos.y,
-        (float)cur->texture.width * CUR_SCALE,
-        (float)cur->texture.height * CUR_SCALE
+        (float)cur->texture.width * currentCursorSize,
+        (float)cur->texture.height * currentCursorSize
     };
 
     Vector2 origin = {
-        cur->offset.x * CUR_SCALE,
-        cur->offset.y * CUR_SCALE
+        cur->offset.x * currentCursorSize,
+        cur->offset.y * currentCursorSize
     };
 
     float rotation = 0.0f;
