@@ -19,9 +19,13 @@ InputField createInputField(int id, Vector2 pos, Vector2 size, const char* label
     return f;
 }
 
-void drawInputField(InputField* f) {
+void drawInputField(InputField* f, CursorState* c) {
     Color borderColor = f->active ? GOLD : DARKGRAY;
     float borderThickness = f->active ? 2.0f : 1.0f;
+
+    if (isHoverInputField(f)) {
+        c->currentType = CUSTOM_CURSOR_TEXT;
+    }
 
     Rectangle rect = { f->pos.x, f->pos.y, f->size.x, f->size.y };
 
@@ -80,4 +84,10 @@ void setInputFieldText(InputField* f, const char* text) {
     f->charBuffer[f->maxLetters] = '\0';
 
     f->letterCount = (int)strlen(f->charBuffer);
+}
+
+bool isHoverInputField(InputField* f) {
+    Rectangle rect = { f->pos.x, f->pos.y, f->size.x, f->size.y };
+
+    return CheckCollisionPointRec(GetMousePosition(), rect);
 }

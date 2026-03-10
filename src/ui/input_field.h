@@ -1,4 +1,5 @@
 #include "raylib.h"
+#include "cursor.h"
 
 typedef struct InputField {
     int id;
@@ -18,6 +19,7 @@ typedef struct InputField {
 
 InputField createInputField(int id, Vector2 pos, Vector2 size, const char* label, Color color);
 
-void drawInputField(InputField* f);
+void drawInputField(InputField* f, CursorState* c);
 void updateInputField(InputField* f);
 void setInputFieldText(InputField* f, const char* text);
+bool isHoverInputField(InputField* f);

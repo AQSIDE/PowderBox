@@ -110,7 +110,7 @@ void handleMouseWheel(Player* p, FrameContext* fc) {
     }
 }
 
-void handlePlayerInput(Player* player, Simulation* sim, Map* map, FrameContext* fc) {
+void handlePlayerInput(Player* player, Simulation* sim, Map* map, CursorState* cur, FrameContext* fc) {
     if (IsKeyPressed(KEY_SPACE)) {
         sim->isPaused = !sim->isPaused;
     }
@@ -165,6 +165,10 @@ void handlePlayerInput(Player* player, Simulation* sim, Map* map, FrameContext* 
     if (IsKeyDown(KEY_E)) {
         sim->simulationSpeed += 1.0f * fc->deltaTime;
         if (sim->simulationSpeed > 10) sim->simulationSpeed = 10;
+    }
+
+    if (!player->isOverUI) {
+        cur->currentType = CUSTOM_CURSOR_BRUSH;
     }
 
     if (!player->isOverUI && player->inputTimer <= 0) {

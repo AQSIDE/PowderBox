@@ -4,6 +4,7 @@
 #include "map.h"
 #include "context.h"
 #include "simulation.h"
+#include "cursor.h"
 #include "file.h"
 
 typedef enum {
@@ -46,7 +47,6 @@ typedef struct Player {
 Player createPlayer(int mapW, int mapH);
 
 void updatePlayer(Player* player);
-void handlePlayerInput(Player* player, Simulation* sim, Map* map, FrameContext* fc);
-void drawPlayerUI(Player* player, FrameContext* fc);
+void handlePlayerInput(Player* player, Simulation* sim, Map* map, CursorState* cur, FrameContext* fc);
 
 #endif

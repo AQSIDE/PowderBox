@@ -31,25 +31,23 @@ void initGameMenu(Map* map) {
     Color dangerHover = (Color){ 190, 50, 50, 255 };
 
     for (int i = 0; i < MENU_BTN_COUNT; i++) {
-        menuButtons[i] = createButton(i, (Vector2) { .x = 0, .y = 0, }, menuButtonSize, btnMenuLabels[i], btnColors[i], BLACK, WHITE);
+        menuButtons[i] = createButton(i, (Vector2) { .x = 0, .y = 0, }, menuButtonSize, btnMenuLabels[i], btnColors[i]);
     }
 
     for (int i = 0; i < MENU_SETTINGS_BTN_COUNT; i++) {
         Color currentBase = ctrlBase;
-        Color currentHover = ctrlHover;
 
         if (i == 2 || i == 4) {
             currentBase = dangerBase;
-            currentHover = dangerHover;
         }
 
-        settingsButtons[i] = createButton(i, (Vector2) { .x = 0, .y = 0, }, settingsButtonSize, btnSettingsLabels[i], currentBase, currentHover, WHITE);
+        settingsButtons[i] = createButton(i, (Vector2) { .x = 0, .y = 0, }, settingsButtonSize, btnSettingsLabels[i], currentBase);
     }
 
     initWidows(map);
 }
 
-void drawMenuBtns(Player* player, FrameContext* fc, float currentMenuY) {
+void drawMenuBtns(Player* player, CursorState* cur, FrameContext* fc, float currentMenuY) {
     float spacing = 10.0f;
     float centerY = currentMenuY + (heightMenu / 2) - (menuButtonSize.y / 2);
 
@@ -65,11 +63,11 @@ void drawMenuBtns(Player* player, FrameContext* fc, float currentMenuY) {
 
         b->pos = (Vector2){ .x = xPos, .y = currentY };
 
-        drawButton(b);
+        drawButton(b, cur);
     }
 }
 
-void drawSettingsBtns(Player* player, FrameContext* fc, float currentMenuY) {
+void drawSettingsBtns(Player* player, CursorState* cur, FrameContext* fc, float currentMenuY) {
     float spacing = 10.0f;
 
     float topRowY = currentMenuY - settingsButtonSize.y - 5.0f;
@@ -80,11 +78,11 @@ void drawSettingsBtns(Player* player, FrameContext* fc, float currentMenuY) {
 
         b->pos = (Vector2){ xPos, topRowY };
 
-        drawButton(b);
+        drawButton(b, cur);
     }
 }
 
-void drawGameMenu(Player* player, Map* map, FrameContext* fc) {
+void drawGameMenu(Player* player, Map* map, CursorState* cur, FrameContext* fc) {
     Color menuBgColor = (Color){ 40, 40, 40, 255 };
     Color borderColor = (Color){ 80, 80, 80, 255 };
     float borderThickness = 2.0f;
@@ -97,22 +95,22 @@ void drawGameMenu(Player* player, Map* map, FrameContext* fc) {
     player->isOverUI = isWindowOpen || CheckCollisionPointRec(GetMousePosition(), menuRect);
 
     if (isWindowOpen) {
-        drawWindow(player, map, fc);
+        drawWindow(player, map, cur, fc);
     }
     else {
         DrawRectangle(0, currentMenuY, fc->window->width, heightMenu, menuBgColor);
         DrawRectangleLinesEx(menuRect, borderThickness, borderColor);
 
-        drawMenuBtns(player, fc, currentMenuY);
-        drawSettingsBtns(player, fc, currentMenuY);
+        drawMenuBtns(player, cur, fc, currentMenuY);
+        drawSettingsBtns(player, cur, fc, currentMenuY);
     }
 }
 
-void updateGameMenu(Player* player, Map* map) {
+void updateGameMenu(Player* player, CursorState* cur, Map* map) {
     bool isWindowOpen = player->currentWindow != UI_NONE;
 
     if (isWindowOpen) {
-        updateWindow(player, map);
+        updateWindow(player, cur, map);
         return;
     }
 
@@ -177,6 +175,7 @@ void updateGameMenu(Player* player, Map* map) {
                 player->currentWindow = UI_MAP;
                 break;
             case 1:
+                cur->currentType = CUSTOM_CURSOR_BUSY;
                 player->currentWindow = UI_FILE;
                 loadMapList(&player->mapList, BASE_MAP_DIR);
                 setMapNameToInputField(map->name);

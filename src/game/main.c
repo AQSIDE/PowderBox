@@ -6,6 +6,7 @@
 #include "map.h"
 #include "window.h"
 #include "game_menu.h"
+#include "cursor.h"
 
 int main() {
     int monitor = GetCurrentMonitor();
@@ -16,7 +17,10 @@ int main() {
     Map map = createMap(426, 240);
     Player player = createPlayer(map.width, map.height);
     Simulation sim = createSimulation();
+    CursorState cursor = loadCursors();
     uint32_t currentFrame = 0;
+
+    cursor.currentType = CUSTOM_CURSOR_BUSY;
 
     const float timeStep = 1.0f / 60.0f;
     float accumulator = 0.0f;
@@ -24,6 +28,7 @@ int main() {
     initGameMenu(&map);
 
     while (!WindowShouldClose()) {
+        cursor.currentType = CUSTOM_CURSOR_DEFAULT;
         window.width = GetScreenWidth();
         window.height = GetScreenHeight();
         window.monitor = GetCurrentMonitor();
@@ -36,13 +41,13 @@ int main() {
             .window = &window
         };
 
-        updateGameMenu(&player, &map);
+        updateGameMenu(&player, &cursor, &map);
 
         fc.mapPoint = getPointInMap(fc.worldMouse.x, fc.worldMouse.y, &map);
         fc.pointedParticle = getPixel(&map, fc.mapPoint.x, fc.mapPoint.y);
 
         updatePlayer(&player);
-        handlePlayerInput(&player, &sim, &map, &fc);
+        handlePlayerInput(&player, &sim, &map, &cursor, &fc);
 
         if (player.inputTimer > 0) {
             player.inputTimer -= fc.deltaTime;
@@ -66,9 +71,10 @@ int main() {
         drawPlayerCrosshair(&player, &fc);
         EndMode2D();
 
-        drawGameMenu(&player, &map, &fc);
+        drawGameMenu(&player, &map, &cursor, &fc);
         drawGameMenuDebug(&player, &map, &sim, &fc);
 
+        drawCursor(&cursor, fc.screenMouse);
         EndDrawing();
     }
 
