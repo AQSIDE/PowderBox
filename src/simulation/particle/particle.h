@@ -47,6 +47,8 @@ typedef struct Particle {
 } Particle;
 
 typedef struct {
+    uint16_t x;
+    uint16_t y;
     uint16_t type;
     uint16_t temperature;
 } ParticleFile;

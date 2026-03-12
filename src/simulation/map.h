@@ -25,12 +25,23 @@ typedef struct Map {
 } Map;
 
 typedef struct {
-    char magic[6]; // PWBOX
+    char magic[4]; // PWB\0
     uint16_t width;
     uint16_t height;
+    uint32_t activePixels;
     long long timestamp;
     ParticleFile* particles;
 } MapFile;
+
+typedef struct {
+    char name[MAX_MAP_NAME];
+    char path[128];
+    long long timestamp;
+    Texture2D preview;
+    int width;
+    int height;
+    size_t fileSize;
+} MapInfo;
 
 typedef struct NeighborList {
     int count;

@@ -48,12 +48,12 @@ void initWidows(Map* map) {
     noClearMapButton = createButton(0, (Vector2) { 0 }, exitBtnSize, "NO", GREEN);
 
     applyMapButton = createButton(0, (Vector2) { 0 }, (Vector2) { 300, 60 }, "APPLY", GREEN);
-    mapWidthIF = createInputField(0, (Vector2) { 0 }, (Vector2) { 300, 60 }, "WIDTH: ", GREEN);
+    mapWidthIF = createInputField(0, (Vector2) { 0 }, (Vector2) { 300, 60 }, "WIDTH: ");
     mapWidthIF.onlyNumbers = true;
-    mapHeightIF = createInputField(0, (Vector2) { 0 }, (Vector2) { 300, 60 }, "HEIGHT: ", GREEN);
+    mapHeightIF = createInputField(0, (Vector2) { 0 }, (Vector2) { 300, 60 }, "HEIGHT: ");
     mapHeightIF.onlyNumbers = true;
 
-    mapNameIF = createInputField(0, (Vector2) { 0 }, (Vector2) { 400, 60 }, "NAME: ", GREEN);
+    mapNameIF = createInputField(0, (Vector2) { 0 }, (Vector2) { 400, 60 }, "NAME: ");
     saveMapButton = createButton(0, (Vector2) { 0 }, (Vector2) { 200, 40 }, "SAVE", GREEN);
     loadMapButton = createButton(0, (Vector2) { 0 }, (Vector2) { 200, 40 }, "LOAD", ORANGE);
     deleteMapButton = createButton(0, (Vector2) { 0 }, (Vector2) { 200, 40 }, "DELETE", RED);
@@ -210,10 +210,12 @@ void drawMapStorage(Player* player, CursorState* cur, FrameContext* fc, float x,
             DrawRectangleLinesEx(destRect, 1.0f, WHITE);
         }
 
+        // Map name
         int textNameX = mapsLeft + 10 + blockHeightPerMap;
         int textNameY = blockY + (blockHeightPerMap / 2) - 18;
         DrawText(map->name, textNameX, textNameY, 20, RAYWHITE);
 
+        // Map timestamp
         time_t t = (time_t)map->timestamp;
         struct tm* dt = localtime(&t);
 
@@ -226,11 +228,17 @@ void drawMapStorage(Player* player, CursorState* cur, FrameContext* fc, float x,
         int sizeTextY = textNameY + 22;
         DrawText(timeStr, textNameX, sizeTextY, 16, LIGHTGRAY);
 
+        // Map size
         char sizeText[32];
         snprintf(sizeText, sizeof(sizeText), "%dx%d", map->width, map->height);
 
         int textWidth = MeasureText(sizeText, 20);
-        DrawText(sizeText, mapRect.x + mapRect.width - textWidth - 20, textNameY, 20, RAYWHITE);
+        int sizePosX = mapRect.x + mapRect.width - textWidth - 20;
+        DrawText(sizeText, sizePosX, textNameY, 20, RAYWHITE);
+
+        // Map file size
+        char* fileSizeText = formatFileSize(map->fileSize);
+        DrawText(fileSizeText, sizePosX, sizeTextY, 16, LIGHTGRAY);
     }
     EndScissorMode();
 

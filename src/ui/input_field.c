@@ -1,7 +1,7 @@
 #include "input_field.h"
 #include "string.h"
 
-InputField createInputField(int id, Vector2 pos, Vector2 size, const char* label, Color color) {
+InputField createInputField(int id, Vector2 pos, Vector2 size, const char* label) {
     InputField f = { 0 };
     f.id = id;
     f.pos = pos;
@@ -9,7 +9,8 @@ InputField createInputField(int id, Vector2 pos, Vector2 size, const char* label
     strncpy(f.label, label, sizeof(f.label) - 1);
     f.label[sizeof(f.label) - 1] = '\0';
 
-    f.color = color;
+    f.color = (Color){ 30, 30, 30, 255 };
+    f.hoverColor = ColorBrightness(f.color, -0.2f);
     f.textSize = 20;
     f.charBuffer[0] = '\0';
     f.letterCount = 0;
@@ -23,13 +24,15 @@ void drawInputField(InputField* f, CursorState* c) {
     Color borderColor = f->active ? GOLD : DARKGRAY;
     float borderThickness = f->active ? 2.0f : 1.0f;
 
+    Color targetColor = f->color;
     if (isHoverInputField(f)) {
         c->currentType = CUSTOM_CURSOR_TEXT;
+        targetColor = f->hoverColor;
     }
 
     Rectangle rect = { f->pos.x, f->pos.y, f->size.x, f->size.y };
 
-    DrawRectangleRec(rect, (Color) { 30, 30, 30, 255 });
+    DrawRectangleRec(rect, targetColor);
     DrawRectangleLinesEx(rect, borderThickness, borderColor);
 
     DrawText(f->charBuffer, (int)f->pos.x + 8, (int)f->pos.y + (f->size.y / 2) - (f->textSize / 2), f->textSize, WHITE);

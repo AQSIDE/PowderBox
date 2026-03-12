@@ -6,6 +6,20 @@
 #include <dirent.h>
 #include <time.h>
 
+const char* formatFileSize(size_t bytes) {
+    static char buffer[32];
+    if (bytes < 1024) {
+        snprintf(buffer, sizeof(buffer), "%zu B", bytes);
+    }
+    else if (bytes < 1024 * 1024) {
+        snprintf(buffer, sizeof(buffer), "%.2f KB", bytes / 1024.0f);
+    }
+    else {
+        snprintf(buffer, sizeof(buffer), "%.2f MB", bytes / (1024.0f * 1024.0f));
+    }
+    return buffer;
+}
+
 Texture2D createTextureFromParticles(ParticleFile* particles, int width, int height) {
     int scale = 4;
     int previewW = width / scale;
@@ -31,35 +45,55 @@ Texture2D createTextureFromParticles(ParticleFile* particles, int width, int hei
     return texture;
 }
 
-MapFile* loadMapFile(const char* path) {
+size_t loadMapFile(MapFile* mFile, const char* path) {
     FILE* file = fopen(path, "rb");
-    if (!file) return NULL;
+    if (!file) return 0;
 
-    char magic[6];
+    fseek(file, 0, SEEK_END);
+    size_t size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char magic[4];
     uint16_t width, height;
 
-    if (fread(magic, 1, 5, file) != 5) {
+    if (fread(magic, 1, 3, file) != 3) {
         fclose(file);
-        return NULL;
+        return 0;
     }
 
-    magic[5] = '\0';
+    magic[3] = '\0';
 
-    if (strcmp(magic, "PWBOX") != 0) {
+    if (strcmp(magic, "PWB")) {
         fclose(file);
-        return NULL;
+        return 0;
     }
 
     long long timestamp;
+    uint32_t activePixels = 0;
 
-    fread(&width, sizeof(uint16_t), 1, file);
-    fread(&height, sizeof(uint16_t), 1, file);
-    fread(&timestamp, sizeof(long long), 1, file);
-
-    MapFile* mFile = malloc(sizeof(MapFile));
-    if (!mFile) {
+    if (!fread(&width, sizeof(uint16_t), 1, file)) {
         fclose(file);
-        return NULL;
+        return 0;
+    }
+
+    if (!fread(&height, sizeof(uint16_t), 1, file)) {
+        fclose(file);
+        return 0;
+    }
+
+    if (width > 4096 || height > 4096) {
+        fclose(file);
+        return 0;
+    }
+
+    if (!fread(&activePixels, sizeof(uint32_t), 1, file)) {
+        fclose(file);
+        return 0;
+    }
+
+    if (!fread(&timestamp, sizeof(long long), 1, file)) {
+        fclose(file);
+        return 0;
     }
 
     mFile->width = width;
@@ -68,18 +102,32 @@ MapFile* loadMapFile(const char* path) {
 
     strcpy(mFile->magic, magic);
 
-    size_t count = width * height;
-    mFile->particles = malloc(count * sizeof(ParticleFile));
-
-    if (!mFile->particles || fread(mFile->particles, sizeof(ParticleFile), count, file) != count) {
-        if (mFile->particles) free(mFile->particles);
-        free(mFile);
+    size_t total = width * height;
+    mFile->particles = malloc(total * sizeof(ParticleFile));
+    if (!mFile->particles) {
         fclose(file);
-        return NULL;
+        return 0;
+    }
+
+    for (size_t i = 0; i < total; i++) {
+        Particle p = createParticleFromType(EMPTY);
+        ParticleFile* pFile = &mFile->particles[i];
+
+        pFile->type = p.type;
+        pFile->temperature = p.temperature;
+    }
+
+    for (uint32_t i = 0; i < activePixels; i++) {
+        ParticleFile p;
+        if (fread(&p, sizeof(ParticleFile), 1, file)) {
+            if (p.x < mFile->width && p.y < mFile->height) {
+                mFile->particles[p.y * mFile->width + p.x] = p;
+            }
+        }
     }
 
     fclose(file);
-    return mFile;
+    return size;
 }
 
 void loadMapList(MapList* list, const char* folder) {
@@ -95,8 +143,14 @@ void loadMapList(MapList* list, const char* folder) {
         char fullPath[256];
         snprintf(fullPath, sizeof(fullPath), "%s/%s", folder, entry->d_name);
 
-        MapFile* mFile = loadMapFile(fullPath);
+        MapFile* mFile = malloc(sizeof(MapFile));
         if (!mFile) continue;
+
+        size_t size = loadMapFile(mFile, fullPath);
+        if (size <= 0) {
+            free(mFile);
+            continue;
+        }
 
         MapInfo* info = &list->maps[count];
 
@@ -111,6 +165,7 @@ void loadMapList(MapList* list, const char* folder) {
         info->width = mFile->width;
         info->height = mFile->height;
         info->timestamp = mFile->timestamp;
+        info->fileSize = size;
 
         info->preview = createTextureFromParticles(mFile->particles, mFile->width, mFile->height);
 
@@ -125,7 +180,14 @@ void loadMapList(MapList* list, const char* folder) {
 }
 
 MapFile* loadMapFromPath(const char* path) {
-    return loadMapFile(path);
+    MapFile* mFile = malloc(sizeof(MapFile));
+    if (!mFile) return NULL;
+
+    size_t size = loadMapFile(mFile, path);
+    if (size > 0) return mFile;
+
+    free(mFile);
+    return NULL;
 }
 
 void saveMapToFolder(Map* map, char* name, const char* folder) {
@@ -134,37 +196,44 @@ void saveMapToFolder(Map* map, char* name, const char* folder) {
     }
 
     char path[256];
-    snprintf(path, sizeof(path), "%s/%s.pwbox", folder, name);
+    snprintf(path, sizeof(path), "%s/%s.pwb", folder, name);
 
     FILE* file = fopen(path, "wb");
 
-    int count = map->width * map->height;
-
-    MapFile fileMap;
-    strcpy(fileMap.magic, "PWBOX");
-    fileMap.width = map->width;
-    fileMap.height = map->height;
-    fileMap.particles = malloc(count * sizeof(ParticleFile));
-
-    for (int i = 0; i < count; i++) {
-        Particle* p = &map->particles[i];
-        ParticleFile pFile;
-
-        pFile.type = (uint16_t)p->type;
-        pFile.temperature = (uint16_t)p->temperature;
-        fileMap.particles[i] = pFile;
+    int total = map->width * map->height;
+    int activeCount = 0;
+    for (int i = 0; i < total; i++) {
+        if (map->particles[i].type != EMPTY) activeCount++;
     }
 
-    fwrite(fileMap.magic, sizeof(char), 5, file);
+    MapFile fileMap;
+    strcpy(fileMap.magic, "PWB");
+    fileMap.width = map->width;
+    fileMap.height = map->height;
+    fileMap.activePixels = activeCount;
+
+    fwrite(fileMap.magic, sizeof(char), 3, file);
     fwrite(&fileMap.width, sizeof(uint16_t), 1, file);
     fwrite(&fileMap.height, sizeof(uint16_t), 1, file);
+    fwrite(&fileMap.activePixels, sizeof(uint32_t), 1, file);
     time_t now = time(NULL);
-
     fwrite(&now, sizeof(long long), 1, file);
-    fwrite(fileMap.particles, sizeof(ParticleFile), count, file);
+
+    for (int y = 0; y < map->height; y++) {
+        for (int x = 0; x < map->width;x++) {
+            Particle* p = &map->particles[y * map->width + x];
+            if (p->type == EMPTY) continue;
+
+            ParticleFile pFile;
+            pFile.x = x;
+            pFile.y = y;
+            pFile.type = p->type;
+            pFile.temperature = p->temperature;
+            fwrite(&pFile, sizeof(ParticleFile), 1, file);
+        }
+    }
 
     fclose(file);
-    free(fileMap.particles);
 }
 
 void deleteMapFile(const char* path) {

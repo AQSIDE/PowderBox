@@ -15,9 +15,10 @@ typedef struct InputField {
     bool onlyNumbers;
     int textSize;
     Color color;
+    Color hoverColor;
 } InputField;
 
-InputField createInputField(int id, Vector2 pos, Vector2 size, const char* label, Color color);
+InputField createInputField(int id, Vector2 pos, Vector2 size, const char* label);
 
 void drawInputField(InputField* f, CursorState* c);
 void updateInputField(InputField* f);

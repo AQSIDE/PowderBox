@@ -8,19 +8,11 @@
 #define BASE_MAP_DIR "maps"
 
 typedef struct {
-    char name[MAX_MAP_NAME];
-    char path[128];
-    long long timestamp;
-    Texture2D preview;
-    int width;
-    int height;
-} MapInfo;
-
-typedef struct {
     MapInfo maps[MAX_MAPS];
     int mapCount;
 } MapList;
 
+const char* formatFileSize(size_t bytes);
 void loadMapList(MapList* list, const char* folder);
 void saveMapToFolder(Map* map, char* name, const char* folder);
 MapFile* loadMapFromPath(const char* path);

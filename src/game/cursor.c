@@ -66,6 +66,7 @@ void drawCursor(CursorState* c, Vector2 mousePos) {
 
     float targetScale = IsMouseButtonDown(MOUSE_LEFT_BUTTON) ? (CUR_SCALE * 0.8f) : CUR_SCALE;
     currentCursorSize = Lerp(currentCursorSize, targetScale, 20.0f * GetFrameTime());
+    currentCursorSize = Clamp(currentCursorSize, 0, CUR_SCALE);
 
     Rectangle source = { 0.0f, 0.0f, (float)cur->texture.width, (float)cur->texture.height };
 

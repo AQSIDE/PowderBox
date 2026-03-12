@@ -15,7 +15,7 @@ Button createButton(int id, Vector2 pos, Vector2 size, char* text, Color color) 
     b.color = color;
     b.hoverSize = (Vector2){ size.x * 0.9f, size.y * 0.9f };
     b.hoverTextSize = TEXT_SIZE * 0.9f;
-    b.hoverColor = Fade(b.color, 0.6f);
+    b.hoverColor = ColorBrightness(color, -0.2f);
     b.borderColor = WHITE;
 
     return b;
@@ -38,6 +38,8 @@ void drawButton(Button* b, CursorState* c) {
     float dt = GetFrameTime();
     b->currentSize = Vector2Lerp(b->currentSize, targetSize, 10.0f * dt);
     b->currentTextSize = Lerp(b->currentTextSize, targetTextSize, 10.0f * dt);
+    b->currentSize = Vector2Clamp(b->currentSize, (Vector2) { 0 }, b->size);
+    b->currentTextSize = Clamp(b->currentTextSize, 0, b->textSize);
 
     float offsetX = (b->size.x - b->currentSize.x) / 2.0f;
     float offsetY = (b->size.y - b->currentSize.y) / 2.0f;

@@ -164,7 +164,7 @@ void handlePlayerInput(Player* player, Simulation* sim, Map* map, CursorState* c
     }
     if (IsKeyDown(KEY_E)) {
         sim->simulationSpeed += 1.0f * fc->deltaTime;
-        if (sim->simulationSpeed > 10) sim->simulationSpeed = 10;
+        if (sim->simulationSpeed > 5) sim->simulationSpeed = 5;
     }
 
     if (!player->isOverUI) {
